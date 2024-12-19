@@ -27,6 +27,8 @@ class SnakeGame():
         # Создаем объект класса GameDialog
         self.__game_dialog = GameDialog()
 
+        self.__player_name = "Max"
+
         # Вызываем метод инициализациии остальных параметров
         self.__init_game()
 
@@ -61,12 +63,13 @@ class SnakeGame():
         self.snake.update()
         self.snake.draw()
 
+        self.__draw_score()
+        self.check_collision()
+
         # Обновляем экран
         pg.display.update()
         pg.display.flip()
         self.__clock.tick(self.__FPS)
-        self.chek_collision()
-        self.__draw_score()
 
     def run_game(self, game_is_run):
         # Основной цикл игры
@@ -79,34 +82,47 @@ class SnakeGame():
             # Отрисовываем всё
             self.__draw_scene()
 
-    def chek_collision(self):
-        list_colid = pg.sprite.spritecollide(self.snake, self.apples, False)
-        if len(list_colid) > 0:
+    def check_collision(self):
+        # Проверяем столкновение головы snake c apple
+        for apple in self.apples:
+            if pg.sprite.collide_rect(apple, self.snake.listBodySnake[0]):
+                self.__current_player_score += 1
+                self.apples.remove(apple)
+
+        # Если количество apple уменьшилось
+        if len(self.apples) < self.apple_count:
+            # Объект apple
+            newApple = Apple(self.screen)
+            self.apples.add(newApple)
+            self.snake.add_segment()
+
+        # Если змейка столкнулась со стеной
+        if self.snake.listBodySnake[0].rect.y < 0 or self.snake.listBodySnake[0].rect.x < 0 \
+                or self.snake.listBodySnake[0].rect.right > self.screen.get_width() \
+                or self.snake.listBodySnake[0].rect.bottom > self.screen.get_height():
+            # Отображаем диалоговое окно GameOver
             if self.__game_dialog.show_dialog_game_over():
                 self.__init_game()
             else:
                 exit()
 
-        for apple in self.apple:
-            if apple.rect.y > self.screen.get_height():
-                self.__current_player_score += 1
-                self.apple.remove(apple)
-                self.all_sprites.remove(apple)
-
-                if self.__current_player_score % 3 == 0:
-                    self.count_apple += 1
-
-        if len(self.apple) < self.count_apple:
-            newApple = Apple(self.screen)
-            self.all_sprites.add(newApple)
-            self.apple.add(newApple)
+        # Если змейка столкнулась сама с собой
+        # Проверяем когда змейка уже больше трех
+        if len(self.snake.listBodySnake) > 3:
+            for segment in self.snake.listBodySnake[1:]:
+                if pg.sprite.collide_rect(segment, self.snake.listBodySnake[0]):
+                    print('gameover')
+                    if self.__game_dialog.show_dialog_game_over():
+                        self.__init_game()
+                    else:
+                        exit()
 
     def __draw_score(self):
         font = pg.font.Font(None, 28)
-        text_name = font.render(f'Игрок: {self.__playername}', True, 'white')
+        text_name = font.render(f'Игрок: {self.__player_name}', True, 'white')
         text_name_rect = text_name.get_rect(topleft=(10, 30))
-        self.screen.bilt(text_name, text_name_rect)
+        self.screen.blit(text_name, text_name_rect)
 
-        text_score = font.render(f'Очки: {self.__player_core}', True, 'white')
+        text_score = font.render(f'Очки: {self.__current_player_score}', True, 'white')
         text_score_rect = text_score.get_rect(topleft=(10, 50))
-        self.screen.bilt(text_score, text_score_rect)
+        self.screen.blit(text_score, text_score_rect)
